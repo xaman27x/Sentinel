@@ -70,7 +70,6 @@ public class TextNormalizer {
         }
 
         // Remove non-alphanumeric (noise) characters
-        input=input.replaceAll("[^a-z]", "");
 
         //remove repeated characters (more than three times waale)
         input=input.replaceAll("(\\w)\\1{2,}", "$1");
