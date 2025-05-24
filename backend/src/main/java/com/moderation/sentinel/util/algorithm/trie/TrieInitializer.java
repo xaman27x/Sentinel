@@ -1,5 +1,10 @@
 package com.moderation.sentinel.util.algorithm.trie;
 import com.moderation.sentinel.util.algorithm.normalization.TextNormalizer;
+import com.moderation.sentinel.util.Constants;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.spec.IvParameterSpec;
@@ -10,18 +15,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Component
 public class TrieInitializer {
-    private static final String SECRET_KEY = System.getenv("AES_SECRET_KEY") != null ?
-            System.getenv("AES_SECRET_KEY") : "aman#sentinel$aastha@2025#$#v1.0";
-    private static final String INIT_VECTOR = System.getenv("AES_INIT_VECTOR") != null ?
-            System.getenv("AES_INIT_VECTOR") : "RandomInitVector";
 
-    public static Map<String, Trie> initialize(String encryptedFilePath) throws Exception {
+    @Value("${application.aes-secret-key}")
+    private String secretKey;
+
+    @Value("${application.init-vector}")
+    private String initVector;
+
+    private final Trie offensiveTrie = new Trie();
+    private final Trie safeTrie = new Trie();
+
+    public Trie getOffensiveTrie() {
+        return offensiveTrie;
+    }
+
+    public Trie getSafeTrie() {
+        return safeTrie;
+    }
+
+    @PostConstruct
+    public void init() throws Exception {
+        Map<String, Trie> tries = initialize("backend/offensive_words.dat");
+        offensiveTrie.getRoot().children.putAll(tries.get("offensive").getRoot().children);
+        safeTrie.getRoot().children.putAll(tries.get("safe").getRoot().children);
+    }
+
+
+    public Map<String, Trie> initialize(String encryptedFilePath) throws Exception {
         byte[] encryptedBytes = Files.readAllBytes(Path.of(encryptedFilePath));
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        SecretKeySpec key = new SecretKeySpec(SECRET_KEY.getBytes(StandardCharsets.UTF_8), "AES");
-        IvParameterSpec iv = new IvParameterSpec(INIT_VECTOR.getBytes(StandardCharsets.UTF_8));
+        SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "AES");
+        IvParameterSpec iv = new IvParameterSpec(initVector.getBytes(StandardCharsets.UTF_8));
         cipher.init(Cipher.DECRYPT_MODE, key, iv);
 
         String decryptedContent = new String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8);
@@ -47,15 +74,15 @@ public class TrieInitializer {
         return tries;
     }
 
-    public static void addWordToEncryptedFile(String encryptedFilePath, String word) throws Exception {
+    public void addWordToEncryptedFile(String encryptedFilePath, String word) throws Exception {
         Path path = Path.of(encryptedFilePath);
         if (!Files.exists(path)) {
             throw new IllegalArgumentException("File does not exist");
         }
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        SecretKeySpec keySpec = new SecretKeySpec(SECRET_KEY.getBytes(StandardCharsets.UTF_8), "AES");
-        IvParameterSpec ivSpec = new IvParameterSpec(INIT_VECTOR.getBytes(StandardCharsets.UTF_8));
+        SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "AES");
+        IvParameterSpec ivSpec = new IvParameterSpec(initVector.getBytes(StandardCharsets.UTF_8));
         cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
 
         byte[] encryptedBytes = Files.readAllBytes(path);
@@ -76,7 +103,8 @@ public class TrieInitializer {
         System.out.println("Word added to the pool database");
     }
 
-    private static String computeSoundex(String input) {
+
+    public static String computeSoundex(String input) {
         if (input == null || input.isEmpty()) return "";
 
         StringBuilder code = new StringBuilder();
@@ -105,30 +133,20 @@ public class TrieInitializer {
 
     private static Map<Character, Character> getCharacterCharacterMap() {
         Map<Character, Character> soundexMap = new HashMap<>();
-        soundexMap.put('b', '1');
-        soundexMap.put('f', '1');
-        soundexMap.put('p', '1');
-        soundexMap.put('v', '1');
-        soundexMap.put('c', '2');
-        soundexMap.put('g', '2');
-        soundexMap.put('j', '2');
-        soundexMap.put('k', '2');
-        soundexMap.put('q', '2');
-        soundexMap.put('s', '2');
-        soundexMap.put('x', '2');
-        soundexMap.put('z', '2');
-        soundexMap.put('d', '3');
-        soundexMap.put('t', '3');
+        soundexMap.put('b', '1'); soundexMap.put('f', '1'); soundexMap.put('p', '1'); soundexMap.put('v', '1');
+        soundexMap.put('c', '2'); soundexMap.put('g', '2'); soundexMap.put('j', '2'); soundexMap.put('k', '2');
+        soundexMap.put('q', '2'); soundexMap.put('s', '2'); soundexMap.put('x', '2'); soundexMap.put('z', '2');
+        soundexMap.put('d', '3'); soundexMap.put('t', '3');
         soundexMap.put('l', '4');
-        soundexMap.put('m', '5');
-        soundexMap.put('n', '5');
+        soundexMap.put('m', '5'); soundexMap.put('n', '5');
         soundexMap.put('r', '6');
         return soundexMap;
     }
 
     public static void main(String[] args) throws Exception {
-        Map<String, Trie> tries = initialize("backend/offensive_words.dat");
-        String input = "aman";
+        TrieInitializer initializer = new TrieInitializer();
+        Map<String, Trie> tries = initializer.initialize("backend/offensive_words.dat");
+        String input = "";
         String normalized = TextNormalizer.normalize(input);
         for (String token : TextNormalizer.tokenize(normalized)) {
             Trie.DetectionResult result = tries.get("offensive").contains(token);

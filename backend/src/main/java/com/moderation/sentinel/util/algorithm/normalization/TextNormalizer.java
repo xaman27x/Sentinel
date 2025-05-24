@@ -51,10 +51,14 @@ public class TextNormalizer {
     }
 
     public static List<String> tokenize(String input) {
-        if (input == null || input.isEmpty()) return List.of();
-        String[] tokens = input.replace("_", " ").split("\\s+");
-        return new ArrayList<>(Arrays.asList(tokens));
+        if (input == null || input.isBlank()) {
+            return List.of();
+        }
+        input = input.replace('_', ' ');
+        String[] tokens = input.trim().split("\\s+");
+        return Arrays.asList(tokens);
     }
+
 
     private static String normalizeRepeatedCharacters(String input, int maxRepeats) {
         if (input.isEmpty()) return input;
