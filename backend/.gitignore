@@ -1,8 +1,9 @@
+# Existing rules from your previous input
 HELP.md
 target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+!src/main/**/target/
+!src/test/**/target/
 
 ### STS ###
 .apt_generated
@@ -26,8 +27,15 @@ target/
 /nbdist/
 /.nb-gradle/
 build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+!src/main/**/build/
+!src/test/**/build/
 
 ### VS Code ###
 .vscode/
+
+### Application Properties ###
+src/main/resources/application.properties
+src/main/resources/application-*.properties
+
+### Constants for File Encryption/Decryption ###
+src/main/java/com/moderation/sentinel/util/Constants.java
