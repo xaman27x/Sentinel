@@ -1,4 +1,6 @@
 package com.moderation.sentinel.model;
 
-public class ApiKey {
+public class RateLimits {
+
+
 }

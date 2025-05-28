@@ -8,32 +8,38 @@ import jakarta.persistence.*;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @JsonProperty("user_id")
+    private Long userId;
 
     @Column(name = "email", nullable = false)
     private String email;
 
     @Column(name = "first_name", nullable = false)
-    @JsonProperty("first_name")
-    private String firstName;
+    @JsonProperty("username")
+    private String username;
 
-    @Column(name = "last_name", nullable = false)
-    @JsonProperty("last_name")
-    private String lastName;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
-    @Column(name = "password", nullable = false)
-    private String password;
+    @Column(name = "created_at", nullable = false)
+    @JsonProperty("created_at")
+    private String createdAt;
 
-    @Column(name = "role", nullable = false)
-    private String role;
+    @Column(name = "updated_at", nullable = true)
+    @JsonProperty("updated_at")
+    private String updatedAt;
+
+    @Column(name = "subscription_tier", nullable = false)
+    @JsonProperty("subscription_tier")
+    private String subscriptionTier;
 
     // Getters and setters
-    public Long getId() {
-        return id;
+    public Long getUserId() {
+        return userId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getEmail() {
@@ -44,40 +50,42 @@ public class User {
         this.email = email;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getUsername() {
+        return username;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    public String getLastName() {
-        return lastName;
+    public void setPassword(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public String getCreatedAt(String createdAt) {
+        return createdAt;
+    }
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
     }
 
-    public String getPassword() {
-        return password;
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+    public void setUpdatedAt(String updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public String getSubscriptionTier() {
+        return subscriptionTier;
     }
 
-    public String getRole() {
-        return role;
+    public void setSubscriptionTier(String subscriptionTier) {
+        this.subscriptionTier = subscriptionTier;
     }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
+    
     @Override
     public String toString() {
-        return "User{id=" + id + ", email='" + email + "', firstName='" + firstName + "', lastName='" + lastName + "', role='" + role + "'}";
+        return "User{id=" + userId + "email= " + email;
     }
 }
