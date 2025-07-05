@@ -1,6 +1,6 @@
 package com.moderation.sentinel.util.algorithm.trie;
+
 import com.moderation.sentinel.util.algorithm.normalization.TextNormalizer;
-import com.moderation.sentinel.util.Constants;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,9 +14,11 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 @Component
 public class TrieInitializer {
+    private static final Logger logger = Logger.getLogger(TrieInitializer.class.getName());
 
     @Value("${application.aes-secret-key}")
     private String secretKey;
@@ -42,7 +44,6 @@ public class TrieInitializer {
         safeTrie.getRoot().children.putAll(tries.get("safe").getRoot().children);
     }
 
-
     public Map<String, Trie> initialize(String encryptedFilePath) throws Exception {
         byte[] encryptedBytes = Files.readAllBytes(Path.of(encryptedFilePath));
 
@@ -55,54 +56,59 @@ public class TrieInitializer {
         List<String> words = List.of(decryptedContent.split("\\R"));
 
         Map<String, Trie> tries = new HashMap<>();
+        
+        // Builds offensive words trie with Soundex phonetic codes
         Trie offensiveTrie = new Trie();
+        int wordCount = 0;
         for (String word : words) {
             String trimmedWord = word.trim().toLowerCase();
-            if (!trimmedWord.isEmpty()) {
+            if (!trimmedWord.isEmpty() && !trimmedWord.startsWith("#")) { // Skip comments
                 String phoneticCode = computeSoundex(trimmedWord);
                 offensiveTrie.insert(trimmedWord, phoneticCode);
+                wordCount++;
             }
         }
         tries.put("offensive", offensiveTrie);
+        logger.info("Loaded " + wordCount + " terms into content filter");
 
+        // Builds safe words trie with common false positives
         Trie safeTrie = new Trie();
-        for (String safeWord : List.of("assassin", "class", "asset", "grass", "passion")) {
-            safeTrie.insert(safeWord.toLowerCase(), "");
-        }
+
         tries.put("safe", safeTrie);
 
         return tries;
     }
 
-    public void addWordToEncryptedFile(String encryptedFilePath, String word) throws Exception {
+    public void addTermToEncryptedFile(String encryptedFilePath, String term) throws Exception {
         Path path = Path.of(encryptedFilePath);
         if (!Files.exists(path)) {
-            throw new IllegalArgumentException("File does not exist");
+            throw new IllegalArgumentException("Encrypted file does not exist");
         }
 
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
         SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "AES");
         IvParameterSpec ivSpec = new IvParameterSpec(initVector.getBytes(StandardCharsets.UTF_8));
+        
         cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
-
         byte[] encryptedBytes = Files.readAllBytes(path);
         String decryptedContent = new String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8);
 
-        String trimmedWord = word.trim().toLowerCase();
-        if (decryptedContent.contains(trimmedWord)) {
-            System.out.println("Word exists in the pool database");
+        String trimmedTerm = term.trim().toLowerCase();
+        if (decryptedContent.contains(trimmedTerm)) {
+            logger.info("Term already exists in database");
             return;
         }
 
-        String updatedContent = decryptedContent + System.lineSeparator() + trimmedWord;
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
 
+        String updatedContent = decryptedContent + System.lineSeparator() + trimmedTerm;
+        cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
         byte[] updatedEncryptedBytes = cipher.doFinal(updatedContent.getBytes(StandardCharsets.UTF_8));
         Files.write(path, updatedEncryptedBytes);
 
-        System.out.println("Word added to the pool database");
+        String phoneticCode = computeSoundex(trimmedTerm);
+        offensiveTrie.insert(trimmedTerm, phoneticCode);
+        
     }
-
 
     public static String computeSoundex(String input) {
         if (input == null || input.isEmpty()) return "";
@@ -113,26 +119,31 @@ public class TrieInitializer {
 
         code.append(Character.toUpperCase(input.charAt(0)));
 
-        Map<Character, Character> soundexMap = getCharacterCharacterMap();
+        Map<Character, Character> soundexMap = getSoundexMappings();
 
+        char prevCode = '0';
         for (int i = 1; i < input.length() && code.length() < 4; i++) {
             char c = input.charAt(i);
             if ("aeiouhwy".indexOf(c) == -1) {
                 char digit = soundexMap.getOrDefault(c, '0');
-                if (digit != '0' && (code.isEmpty() || code.charAt(code.length() - 1) != digit)) {
+                if (digit != '0' && digit != prevCode) {
                     code.append(digit);
+                    prevCode = digit;
                 }
             }
         }
 
+        // Padding with zeroes
         while (code.length() < 4) {
             code.append('0');
         }
+        
         return code.length() > 4 ? code.substring(0, 4) : code.toString();
     }
 
-    private static Map<Character, Character> getCharacterCharacterMap() {
+    private static Map<Character, Character> getSoundexMappings() {
         Map<Character, Character> soundexMap = new HashMap<>();
+        // Soundex mapping groups
         soundexMap.put('b', '1'); soundexMap.put('f', '1'); soundexMap.put('p', '1'); soundexMap.put('v', '1');
         soundexMap.put('c', '2'); soundexMap.put('g', '2'); soundexMap.put('j', '2'); soundexMap.put('k', '2');
         soundexMap.put('q', '2'); soundexMap.put('s', '2'); soundexMap.put('x', '2'); soundexMap.put('z', '2');
@@ -141,19 +152,5 @@ public class TrieInitializer {
         soundexMap.put('m', '5'); soundexMap.put('n', '5');
         soundexMap.put('r', '6');
         return soundexMap;
-    }
-
-    public static void main(String[] args) throws Exception {
-        TrieInitializer initializer = new TrieInitializer();
-        Map<String, Trie> tries = initializer.initialize("backend/offensive_words.dat");
-        String input = "";
-        String normalized = TextNormalizer.normalize(input);
-        for (String token : TextNormalizer.tokenize(normalized)) {
-            Trie.DetectionResult result = tries.get("offensive").contains(token);
-            if (!result.isOffensive) {
-                result = tries.get("offensive").containsPhonetic(computeSoundex(token));
-            }
-            System.out.println("Token: " + token + " -> " + result);
-        }
     }
 }
