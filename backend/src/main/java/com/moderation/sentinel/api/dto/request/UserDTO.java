@@ -18,7 +18,7 @@ public class UserDTO {
     @JsonProperty("password")
     private String password;
 
-    // Getters and setters
+    // Getters and Setters
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public String getLastName() { return lastName; }

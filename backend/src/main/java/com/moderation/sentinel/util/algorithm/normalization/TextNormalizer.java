@@ -33,7 +33,7 @@ public class TextNormalizer {
         substitutionMap.put("¥", 'y'); substitutionMap.put("j", 'y'); substitutionMap.put("ý", 'y'); substitutionMap.put("ʎ", 'y');
         substitutionMap.put("2", 'z'); substitutionMap.put("ζ", 'z'); substitutionMap.put("ʐ", 'z'); substitutionMap.put("ž", 'z');
     }
-
+    
     public static String normalize(String input) {
         if (input == null || input.isEmpty()) return "";
 
