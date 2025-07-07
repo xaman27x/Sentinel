@@ -27,11 +27,11 @@ CREATE TABLE IF NOT EXISTS api_keys (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- Rate Limits table
+-- Rate Limits table (FIXED: api_key_id changed to UUID)
 CREATE TABLE IF NOT EXISTS rate_limits (
     rate_limit_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT,
-    api_key_id VARCHAR(255),
+    api_key_id UUID,  -- Changed from VARCHAR(255) to UUID
     requests_count INTEGER NOT NULL DEFAULT 0,
     window_start TIMESTAMP NOT NULL,
     window_end TIMESTAMP NOT NULL,
@@ -42,11 +42,11 @@ CREATE TABLE IF NOT EXISTS rate_limits (
     FOREIGN KEY (api_key_id) REFERENCES api_keys(api_key_id) ON DELETE CASCADE
 );
 
--- Moderation Logs table
+-- Moderation Logs table (FIXED: api_key_id changed to UUID)
 CREATE TABLE IF NOT EXISTS moderation_logs (
     log_id BIGSERIAL PRIMARY KEY,
     user_id BIGINT,
-    api_key_id VARCHAR(255),
+    api_key_id UUID,  -- Changed from VARCHAR(255) to UUID
     input_text TEXT,
     is_offensive BOOLEAN NOT NULL,
     confidence_score DOUBLE PRECISION NOT NULL,

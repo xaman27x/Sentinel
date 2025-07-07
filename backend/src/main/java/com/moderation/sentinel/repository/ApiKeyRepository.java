@@ -30,4 +30,18 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID> {
     
     @Query("SELECT ak FROM ApiKey ak WHERE ak.userId = :userId ORDER BY ak.createdAt DESC")
     List<ApiKey> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
+
+    Optional<ApiKey> findByApiKey(String apiKey);
+    
+    List<ApiKey> findByUserIdAndIsActiveOrderByCreatedAtDesc(Long userId, boolean isActive);
+    
+    @Query("SELECT ak FROM ApiKey ak WHERE ak.userId = :userId AND ak.apiKeyId = :apiKeyId")
+    Optional<ApiKey> findByUserIdAndApiKeyId(@Param("userId") Long userId, @Param("apiKeyId") UUID apiKeyId);
+    
+    boolean existsByUserIdAndApiKeyId(Long userId, UUID apiKeyId);
+    
+    boolean existsByApiKeyAndIsActive(String apiKey, boolean isActive);
+    
+    @Query("UPDATE ApiKey ak SET ak.isActive = false, ak.revokedAt = CURRENT_TIMESTAMP WHERE ak.apiKeyId = :apiKeyId AND ak.userId = :userId")
+    int revokeApiKey(@Param("apiKeyId") UUID apiKeyId, @Param("userId") Long userId);
 }
