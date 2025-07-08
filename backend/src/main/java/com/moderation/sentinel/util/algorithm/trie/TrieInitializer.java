@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.spec.IvParameterSpec;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,45 +41,50 @@ public class TrieInitializer {
 
     @PostConstruct
     public void init() throws Exception {
-        Map<String, Trie> tries = initialize("backend/offensive_words.dat");
+        Map<String, Trie> tries = initializeFromClasspath("offensive_words.dat");
         offensiveTrie.getRoot().children.putAll(tries.get("offensive").getRoot().children);
         safeTrie.getRoot().children.putAll(tries.get("safe").getRoot().children);
     }
 
-    public Map<String, Trie> initialize(String encryptedFilePath) throws Exception {
-        byte[] encryptedBytes = Files.readAllBytes(Path.of(encryptedFilePath));
-
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "AES");
-        IvParameterSpec iv = new IvParameterSpec(initVector.getBytes(StandardCharsets.UTF_8));
-        cipher.init(Cipher.DECRYPT_MODE, key, iv);
-
-        String decryptedContent = new String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8);
-        List<String> words = List.of(decryptedContent.split("\\R"));
-
-        Map<String, Trie> tries = new HashMap<>();
-        
-        // Builds offensive words trie with Soundex phonetic codes
-        Trie offensiveTrie = new Trie();
-        int wordCount = 0;
-        for (String word : words) {
-            String trimmedWord = word.trim().toLowerCase();
-            if (!trimmedWord.isEmpty() && !trimmedWord.startsWith("#")) { // Skip comments
-                String phoneticCode = computeSoundex(trimmedWord);
-                offensiveTrie.insert(trimmedWord, phoneticCode);
-                wordCount++;
+    public Map<String, Trie> initializeFromClasspath(String resourceName) throws Exception {
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourceName)) {
+            if (inputStream == null) {
+                throw new FileNotFoundException(resourceName + " not found in classpath");
             }
+
+            byte[] encryptedBytes = inputStream.readAllBytes();
+
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "AES");
+            IvParameterSpec iv = new IvParameterSpec(initVector.getBytes(StandardCharsets.UTF_8));
+            cipher.init(Cipher.DECRYPT_MODE, key, iv);
+
+            String decryptedContent = new String(cipher.doFinal(encryptedBytes), StandardCharsets.UTF_8);
+            List<String> words = List.of(decryptedContent.split("\\R"));
+
+            Map<String, Trie> tries = new HashMap<>();
+
+            Trie offensiveTrie = new Trie();
+            int wordCount = 0;
+            for (String word : words) {
+                String trimmedWord = word.trim().toLowerCase();
+                if (!trimmedWord.isEmpty() && !trimmedWord.startsWith("#")) {
+                    String phoneticCode = computeSoundex(trimmedWord);
+                    offensiveTrie.insert(trimmedWord, phoneticCode);
+                    wordCount++;
+                }
+            }
+
+            logger.info("Loaded " + wordCount + " terms into content filter");
+            tries.put("offensive", offensiveTrie);
+
+            Trie safeTrie = new Trie();
+            tries.put("safe", safeTrie);
+
+            return tries;
         }
-        tries.put("offensive", offensiveTrie);
-        logger.info("Loaded " + wordCount + " terms into content filter");
-
-        // Builds safe words trie with common false positives
-        Trie safeTrie = new Trie();
-
-        tries.put("safe", safeTrie);
-
-        return tries;
     }
+
 
     public void addTermToEncryptedFile(String encryptedFilePath, String term) throws Exception {
         Path path = Path.of(encryptedFilePath);

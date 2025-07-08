@@ -41,9 +41,9 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                     //For Testing api/keys/** route is unprotected
                 .requestMatchers("/api/keys/**").permitAll()
-                
-                // Protected endpoints
-                .requestMatchers("/api/users/**").authenticated()
+                    .requestMatchers("api/logs/**").permitAll()
+                    .requestMatchers("/api/users/**").permitAll()
+
                 .anyRequest().authenticated()
             );
         

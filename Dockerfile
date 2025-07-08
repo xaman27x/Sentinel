@@ -1,13 +1,13 @@
 # =========================
 # Step 1: Build Frontend
 # =========================
-FROM node:20-alpine AS frontend-builder
+#FROM node:20-alpine AS frontend-builder
 
-WORKDIR /app/frontend
-COPY frontend/ ./
+# WORKDIR /app/frontend
+# COPY frontend/ ./
 
-RUN npm install
-RUN npm run build
+# RUN npm install
+# RUN npm run build
 
 
 # =========================
@@ -19,7 +19,7 @@ WORKDIR /app/backend
 COPY backend/ ./
 
 # Copy frontend build into Spring Boot static resources
-COPY --from=frontend-builder /app/frontend/dist/ src/main/resources/static/
+# COPY --from=frontend-builder /app/frontend/dist/ src/main/resources/static/
 
 RUN mvn clean package -DskipTests
 
@@ -35,4 +35,4 @@ COPY --from=backend-builder /app/backend/target/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dserver.port=${PORT:-8080}", "-jar", "app.jar"]
