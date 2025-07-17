@@ -106,7 +106,7 @@ Thank you for your interest in contributing to **Sentinel**! Contributions are w
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/sentinel.git
+git clone https://github.com/xaman27x/sentinel.git
 cd sentinel
 
 # Backend (Java - Spring Boot)
