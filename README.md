@@ -66,8 +66,7 @@ Sentinel's moderation engine is a **deterministic rule-based system** optimized 
 |----------------------|----------------------------------------|
 | Backend API          | Spring Boot, Java                      |
 | Text Filtering       | Custom Algorithms (DSA, Trie, Soundex) |
-| Image Moderation     | Python 3, FastAPI, OpenCV              |
-| Database             | PostgreSQL                             |
+| Database             | PostgreSQL (NeonDB)                    |
 | Frontend             | ReactJS, TailwindCSS                   |
 | Deployment (Backend) | Docker, GCP (Cloud Run)                |
 | Deployment (Frontend)| AWS Amplify                            |
